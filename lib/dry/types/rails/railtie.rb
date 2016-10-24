@@ -19,6 +19,22 @@ module Dry
             TypesRegistration::REGISTERED_TYPES << name if autoloaded
           end
         end
+        def register_class(klass, meth = :new)
+          name = identifier(klass)
+          return if TypesRegistration::REGISTERED_TYPES.include?(name)
+          
+          super.tap do
+            # Check to see if we need to remove the registered type
+            autoloaded = ActiveSupport::Dependencies.will_unload?(klass)
+            # ActiveSupport::Dependencies.will_unload?(klass) won't return true yet
+            #   if it's the first time a constant is being autoloaded
+            #   so we have to see if we're in the middle of loading a missing constants
+            autoloaded |= caller.any? { |line| line =~ /\:in.*?new_constants_in/ }
+
+            TypesRegistration::REGISTERED_TYPES << name if autoloaded
+          end
+
+        end
       end
 
       Dry::Types.module_eval do
